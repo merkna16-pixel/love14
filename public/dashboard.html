@@ -1,54 +1,43 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Love ❤️ Якуб + Соня</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5b6aa">
+  <title>Love App — наше пространство</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div id="app">
-        <header class="header">
-            <h1>❤️ Якуб + Соня</h1>
-            <div class="header-right">
-                <div class="coins">
-                    🪙 <span id="coinsYakub">500</span> Якуб
-                    🪙 <span id="coinsSonya">500</span> Соня
-                </div>
-                <div>
-                    <span id="currentUser"></span>
-                    <button id="logoutBtn">🚪</button>
-                </div>
-            </div>
-        </header>
-
-        <nav class="tabs">
-            <button class="tab active" data-tab="home">🏠 Главная</button>
-            <button class="tab" data-tab="tasks">✅ Задания</button>
-            <button class="tab" data-tab="shop">🛍️ Магазин</button>
-            <button class="tab" data-tab="history">📜 История</button>
-        </nav>
-
-        <section id="tab-home" class="tab-content active">
-            <div id="mainStats">
-                <p>👫 Вместе: <span id="daysTogether">0</span> дней</p>
-                <p>🔥 Серия: <span id="streakDays">0</span> дней</p>
-            </div>
-        </section>
-
-        <section id="tab-tasks" class="tab-content">
-            <div id="tasksContainer">Загрузка...</div>
-        </section>
-
-        <section id="tab-shop" class="tab-content">
-            <div id="shopContainer">Загрузка...</div>
-        </section>
-
-        <section id="tab-history" class="tab-content">
-            <div id="historyContainer">Загрузка...</div>
-        </section>
-    </div>
-
-    <script src="script.js"></script>
+<body class="app-page">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <a class="brand" href="#home"><span>Y</span><b>+</b><span>S</span><small>LOVE APP</small></a>
+      <p class="side-caption">Наши главы</p>
+      <nav class="nav-tabs" aria-label="Разделы приложения">
+        <button class="nav-tab active" data-tab="home"><i>✦</i> Сегодня</button>
+        <button class="nav-tab" data-tab="tasks"><i>✓</i> Задания</button>
+        <button class="nav-tab" data-tab="shop"><i>♡</i> Желания</button>
+        <button class="nav-tab" data-tab="calendar"><i>○</i> Календарь</button>
+        <button class="nav-tab" data-tab="moments"><i>▧</i> Моменты</button>
+        <button class="nav-tab" data-tab="history"><i>≋</i> История</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="mini-heart">♥</div><p>Собирайте<br>свою историю.</p><button id="logoutBtn" class="logout-button">Выйти <span>↗</span></button></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><div><p class="eyebrow" id="greeting">Доброе утро</p><h1>Привет, <span id="currentUser">любовь</span> <span class="wave">✦</span></h1></div><div class="couple-balance"><div class="avatar-stack"><span>Я</span><span>С</span></div><div><strong>Вместе</strong><small><span id="coinsTotal">1000</span> монет</small></div></div></header>
+      <section id="tab-home" class="tab-content active">
+        <div class="hero-strip"><div><p class="eyebrow">Сегодняшняя дата</p><h2 id="todayLabel">—</h2><p id="dailyQuote">Каждый день рядом — уже маленький праздник.</p></div><div class="hero-mark">Y <span>♥</span> S</div></div>
+        <div class="stats-grid"><article class="stat-card stat-feature"><div class="stat-icon">⌁</div><p class="eyebrow">Вместе уже</p><strong id="daysTogether">0</strong><span>дней общей истории</span><div class="stat-line"><i></i></div></article><article class="stat-card"><div class="stat-icon fire">♨</div><p class="eyebrow">Текущая серия</p><strong><span id="streakDays">0</span> <small>дн.</small></strong><span>ритм заботы</span></article><article class="stat-card"><div class="stat-icon coin">◉</div><p class="eyebrow">Наши монеты</p><strong id="coinsCombined">1000</strong><span><b id="coinsYakub">500</b> Якуб · <b id="coinsSonya">500</b> Соня</span></article></div>
+        <div class="section-heading"><div><p class="eyebrow">Маленькие шаги</p><h2>На сегодня</h2></div><button class="text-button" data-open-tab="tasks">Все задания <span>→</span></button></div><div id="homeTasks" class="task-preview"></div>
+        <div class="home-lower"><section class="memory-card"><div class="section-heading"><div><p class="eyebrow">Архив нежности</p><h2>Воспоминание месяца</h2></div><button class="icon-button" data-open-tab="moments" aria-label="Открыть моменты">↗</button></div><div id="memoryContent" class="memory-content"></div></section><section class="goal-card"><div class="section-heading"><div><p class="eyebrow">Мечта на двоих</p><h2 id="goalTitle">Поездка</h2></div><span class="goal-emoji">✈</span></div><div class="goal-numbers"><strong id="goalCurrent">0</strong><span>/ <b id="goalTarget">10 000</b> 🪙</span></div><div class="progress"><i id="goalProgress"></i></div><button class="button button-light" data-action="edit-goal">Обновить прогресс <span>+</span></button></section></div>
+      </section>
+      <section id="tab-tasks" class="tab-content"><div class="page-heading"><div><p class="eyebrow">Ритуалы заботы</p><h2>Задания на сегодня</h2></div><span class="round-label">+10 🪙 за подтверждение</span></div><div id="tasksContainer" class="tasks-list"></div></section>
+      <section id="tab-shop" class="tab-content"><div class="page-heading"><div><p class="eyebrow">Потратить с удовольствием</p><h2>Магазин желаний</h2></div></div><div id="shopContainer" class="shop-grid"></div></section>
+      <section id="tab-calendar" class="tab-content"><div class="page-heading"><div><p class="eyebrow">Даты, которые хочется помнить</p><h2>Календарь пары</h2></div></div><div class="calendar-layout"><form id="datesForm" class="panel date-form"></form><div id="eventsContainer" class="panel events-list"></div></div></section>
+      <section id="tab-moments" class="tab-content"><div class="page-heading"><div><p class="eyebrow">Фотоальбом «Наши моменты»</p><h2>Храним хорошее</h2></div></div><div class="moments-layout"><form id="photoForm" class="panel upload-panel"><label class="upload-box" for="photoInput"><span>＋</span><b>Добавить фотографию</b><small>JPG или PNG до 10 МБ</small></label><input id="photoInput" type="file" accept="image/*" hidden><input id="photoDescription" placeholder="Подпись к моменту"><button class="button button-dark" type="submit">Сохранить момент <span>↗</span></button><p id="photoError" class="form-error"></p></form><div id="photosContainer" class="photo-grid"></div></div></section>
+      <section id="tab-history" class="tab-content"><div class="page-heading"><div><p class="eyebrow">Хроника пары</p><h2>Все ваши шаги</h2></div></div><div class="history-layout"><div id="historyContainer" class="history-list"></div><div class="panel achievements-panel"><p class="eyebrow">Коллекция</p><h2>Достижения</h2><div id="achievementsContainer"></div></div></div></section>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="script.js"></script>
 </body>
 </html>

@@ -1,25 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Love ❤️</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❤️</text></svg>">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5b6aa">
+  <title>Love App — Якуб и Соня</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1>❤️ Love</h1>
-            <p class="subtitle">Якуб + Соня</p>
-            <form id="loginForm">
-                <input type="text" id="loginInput" placeholder="Логин" required>
-                <input type="password" id="passwordInput" placeholder="Пароль" required>
-                <button type="submit">Войти</button>
-                <div id="loginError" class="error"></div>
-            </form>
-        </div>
-    </div>
-    <script src="login.js"></script>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-art" aria-label="Love App">
+      <div class="sun-stamp">Y + S</div>
+      <p class="eyebrow">PRIVATE SPACE / 01</p>
+      <h1>Love<br><em>App</em></h1>
+      <p class="login-note">Маленькая вселенная для ваших больших «мы».</p>
+      <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+    </section>
+    <section class="login-panel">
+      <div>
+        <p class="eyebrow">Добро пожаловать домой</p>
+        <h2>Кто сегодня<br>на связи?</h2>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label>Имя <input id="loginInput" autocomplete="username" placeholder="Якуб или Соня" required></label>
+        <label>Пароль <input id="passwordInput" type="password" autocomplete="current-password" placeholder="••••••" required></label>
+        <button class="button button-dark" type="submit">Войти в наше пространство <span>↗</span></button>
+        <p id="loginError" class="form-error" role="alert"></p>
+      </form>
+      <p class="login-footer">Только для двоих · приватная территория</p>
+    </section>
+  </main>
+  <script src="login.js"></script>
 </body>
 </html>

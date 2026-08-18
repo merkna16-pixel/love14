@@ -1,276 +1,121 @@
 const express = require('express');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const START_DATE = '2024-01-01';
+const USERS = {
+    'Якуб': { name: 'Якуб', password: '01.09', coins: 500 },
+    'Соня': { name: 'Соня', password: '25.08', coins: 500 }
+};
+const extraTasks = ['❤️ Обнять', '🍳 Приготовить завтрак', '🎬 Посмотреть фильм', '🚶 Прогуляться вместе', '💆 Сделать массаж', '☕ Приготовить кофе'];
+const shop = [
+    { id: 'cafe', name: 'Свидание в кафе', price: 300, emoji: '☕' },
+    { id: 'snacks', name: 'Купить вкусняшки', price: 150, emoji: '🍫' },
+    { id: 'movie', name: 'Совместный фильм', price: 100, emoji: '🎬' },
+    { id: 'gift', name: 'Подарок', price: 500, emoji: '🎁' }
+];
+const state = {
+    users: Object.fromEntries(Object.values(USERS).map(user => ({ ...user, coins: 500 })).map(user => [user.name, user])),
+    tasks: [], purchases: [], history: [], photos: [], dates: [
+        { id: 'meeting', title: 'День знакомства', date: '2024-01-01', emoji: '❤️' },
+        { id: 'anniversary', title: 'Годовщина', date: '2025-01-01', emoji: '🎂' },
+        { id: 'yakub-birthday', title: 'День рождения Якуба', date: '', emoji: '🎈' },
+        { id: 'sonya-birthday', title: 'День рождения Сони', date: '', emoji: '🎈' }
+    ],
+    goals: [{ id: 'trip', title: 'Поездка', current: 5000, target: 10000, emoji: '✈️' }],
+    achievements: [
+        { id: 'first-task', title: 'Первое задание', emoji: '🌱', condition: 'Выполнено первое задание' },
+        { id: 'ten-tasks', title: '10 заданий', emoji: '🔥', condition: 'Выполнено 10 заданий' },
+        { id: 'hundred-tasks', title: '100 заданий', emoji: '💯', condition: 'Выполнено 100 заданий' },
+        { id: 'thirty-days', title: '30 дней вместе', emoji: '🌙', condition: 'Вместе уже 30 дней' },
+        { id: 'first-date', title: 'Первое свидание', emoji: '🥂', condition: 'Куплено первое свидание' },
+        { id: 'thousand-coins', title: '1000 монет', emoji: '🪙', condition: 'Заработано 1000 монет' }
+    ]
+};
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.static('public'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ============ SUPABASE ============
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const hasRealSupabaseConfig = !!supabaseUrl && !!supabaseKey && !supabaseUrl.includes('ваш_') && !supabaseKey.includes('ваш_') && !supabaseUrl.includes('example');
-
-if (!hasRealSupabaseConfig) {
-    console.warn('⚠️ Supabase не настроен: будет использован локальный fallback-режим для входа');
+const today = () => new Date().toISOString().slice(0, 10);
+const normalize = value => String(value || '').trim().toLowerCase();
+const daysTogether = () => Math.max(0, Math.floor((Date.now() - new Date(START_DATE)) / 86400000));
+const totalCompleted = () => state.tasks.filter(task => task.confirmed).length;
+const totalEarned = () => state.history.filter(item => item.type === 'reward').length * 10;
+function ensureTodayTasks() {
+    const date = today();
+    if (state.tasks.some(task => task.date === date)) return;
+    const seed = Date.now();
+    state.tasks.push(
+        { id: `${seed}-morning`, text: '☀️ Пожелать доброе утро', date, done: false, confirmed: false, author: null },
+        { id: `${seed}-night`, text: '🌙 Пожелать спокойной ночи', date, done: false, confirmed: false, author: null },
+        { id: `${seed}-extra`, text: extraTasks[Math.floor(Math.random() * extraTasks.length)], date, done: false, confirmed: false, author: null }
+    );
 }
-
-const supabase = hasRealSupabaseConfig ? createClient(supabaseUrl, supabaseKey) : null;
-
-function normalizeLogin(value = '') {
-    return String(value)
-        .normalize('NFC')
-        .trim()
-        .replace(/\s+/g, ' ')
-        .toLowerCase();
-}
-
-function findMatchingUser(users, login, password) {
-    const normalizedLogin = normalizeLogin(login);
-    const normalizedPassword = String(password ?? '').trim();
-    const loginVariants = new Set([normalizedLogin]);
-
-    if (normalizedLogin === 'соня' || normalizedLogin === 'sonya' || normalizedLogin === 'sonia') {
-        loginVariants.add('соня');
-        loginVariants.add('sonya');
-        loginVariants.add('sonia');
-    }
-
-    if (normalizedLogin === 'якуб' || normalizedLogin === 'yakub') {
-        loginVariants.add('якуб');
-        loginVariants.add('yakub');
-    }
-
-    return (users || []).find((user) => {
-        const storedName = normalizeLogin(user.name);
-        const storedPassword = String(user.password ?? '').trim();
-        return loginVariants.has(storedName) && storedPassword === normalizedPassword;
-    });
-}
-
-const fallbackUsers = [
-    { name: 'Якуб', password: 'yakub123', coins: 500 },
-    { name: 'Соня', password: 'sonya123', coins: 500 }
-];
-
-function getFallbackData() {
-    return {
-        users: Object.fromEntries(fallbackUsers.map(u => [u.name, { password: u.password, coins: u.coins }])),
-        tasks: [],
-        purchases: [],
-        history: [],
-        goals: [],
-        achievements: [],
-        shop: [],
-        startDate: '2024-01-01',
-        streak: 0
+function unlockAchievements() {
+    const completed = totalCompleted();
+    const earned = totalEarned();
+    const conditions = {
+        'first-task': completed >= 1, 'ten-tasks': completed >= 10, 'hundred-tasks': completed >= 100,
+        'thirty-days': daysTogether() >= 30, 'first-date': state.purchases.some(item => item.id === 'cafe'), 'thousand-coins': earned >= 1000
     };
+    state.achievements.forEach(item => { if (conditions[item.id]) item.unlocked = true; });
 }
+function snapshot() {
+    ensureTodayTasks();
+    unlockAchievements();
+    return { users: state.users, tasks: state.tasks, purchases: state.purchases, history: state.history, dates: state.dates, goals: state.goals, achievements: state.achievements, shop, photos: state.photos, stats: { daysTogether: daysTogether(), streak: totalCompleted() ? 1 : 0, completedTasks: totalCompleted(), earnedCoins: totalEarned(), purchases: state.purchases.length } };
+}
+function addHistory(text, type = 'activity', extra = {}) { state.history.unshift({ id: Date.now() + Math.random(), date: today(), text, type, ...extra }); }
+function validUser(name) { return Object.prototype.hasOwnProperty.call(state.users, name); }
 
-// ============ API ============
-
-// Получить все данные
-app.get('/api/data', async (req, res) => {
-    try {
-        if (!hasRealSupabaseConfig || !supabase) {
-            return res.json(getFallbackData());
-        }
-
-        const [users, tasks, purchases, history, goals, achievements, shop] = await Promise.all([
-            supabase.from('users').select('*'),
-            supabase.from('tasks').select('*'),
-            supabase.from('purchases').select('*'),
-            supabase.from('history').select('*'),
-            supabase.from('goals').select('*'),
-            supabase.from('achievements').select('*'),
-            supabase.from('shop').select('*')
-        ]);
-
-        const usersMap = {};
-        users.data.forEach(u => {
-            usersMap[u.name] = { password: u.password, coins: u.coins };
-        });
-
-        res.json({
-            users: usersMap,
-            tasks: tasks.data || [],
-            purchases: purchases.data || [],
-            history: history.data || [],
-            goals: goals.data || [],
-            achievements: achievements.data || [],
-            shop: shop.data || [],
-            startDate: '2024-01-01',
-            streak: 0
-        });
-    } catch (error) {
-        res.status(500).json({ error: 'Ошибка чтения базы данных' });
-    }
+app.get('/api/data', (req, res) => res.json(snapshot()));
+app.post('/api/login', (req, res) => {
+    const login = Object.keys(state.users).find(name => normalize(name) === normalize(req.body.login));
+    if (login && state.users[login].password === String(req.body.password || '').trim()) return res.json({ success: true, user: login });
+    res.json({ success: false, error: 'Неверный логин или пароль' });
 });
-
-// Логин
-app.post('/api/login', async (req, res) => {
-    try {
-        const { login, password } = req.body;
-        const trimmedLogin = String(login ?? '').trim();
-        console.log(`🔐 Попытка входа: ${trimmedLogin}`);
-
-        if (!hasRealSupabaseConfig || !supabase) {
-            const matchedUser = findMatchingUser(fallbackUsers, trimmedLogin, password);
-            if (matchedUser) {
-                const userName = String(matchedUser.name || trimmedLogin).trim();
-                console.log(`✅ Вход успешен: ${userName}`);
-                return res.json({ success: true, user: userName });
-            }
-            console.log(`❌ Пользователь не найден: ${trimmedLogin}`);
-            return res.json({ success: false });
-        }
-
-        const { data: users, error } = await supabase.from('users').select('*');
-
-        if (error) {
-            console.error('❌ Ошибка Supabase:', error);
-            return res.status(500).json({ success: false, error: 'Ошибка БД' });
-        }
-
-        const matchedUser = findMatchingUser(users, trimmedLogin, password);
-
-        if (matchedUser) {
-            const userName = String(matchedUser.name || trimmedLogin).trim();
-            console.log(`✅ Вход успешен: ${userName}`);
-            res.json({ success: true, user: userName });
-        } else {
-            console.log(`❌ Пользователь не найден: ${trimmedLogin}`);
-            res.json({ success: false });
-        }
-    } catch (error) {
-        console.error('❌ Ошибка при логине:', error);
-        res.status(500).json({ success: false, error: 'Ошибка сервера' });
-    }
-});
-
-// Выполнить задание
-app.post('/api/task/do', async (req, res) => {
-    const { taskId, user } = req.body;
-    await supabase
-        .from('tasks')
-        .update({ done: true, author: user, pending: true })
-        .eq('id', taskId);
-
-    await supabase.from('history').insert({
-        date: new Date().toISOString().split('T')[0],
-        text: `✅ ${user} выполнил(а) задание`
-    });
-
+app.post('/api/task/do', (req, res) => {
+    const task = state.tasks.find(item => item.id === req.body.taskId);
+    if (!task || !validUser(req.body.user) || task.confirmed || task.done) return res.status(400).json({ success: false, error: 'Задание уже отмечено' });
+    task.done = true; task.author = req.body.user;
+    addHistory(`💌 ${req.body.user} выполнил(а): ${task.text}`, 'activity');
     res.json({ success: true });
 });
-
-// Подтвердить задание
-app.post('/api/task/confirm', async (req, res) => {
-    const { taskId, user } = req.body;
-    const REWARD = 10;
-
-    const { data: task } = await supabase
-        .from('tasks')
-        .update({ confirmed: true, pending: false })
-        .eq('id', taskId)
-        .eq('done', true)
-        .eq('confirmed', false)
-        .neq('author', user)
-        .select();
-
-    if (task && task.length > 0) {
-        await supabase.rpc('add_coins', { user1: 'Якуб', user2: 'Соня', amount: REWARD });
-        await supabase.from('history').insert({
-            date: new Date().toISOString().split('T')[0],
-            text: `✅ ${user} подтвердил(а) задание (+${REWARD}🪙)`
-        });
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
-    }
-});
-
-// Купить товар
-app.post('/api/shop/buy', async (req, res) => {
-    const { itemName, price, buyer, date } = req.body;
-
-    const { data: userData } = await supabase
-        .from('users')
-        .select('coins')
-        .eq('name', buyer);
-
-    if (!userData || userData[0].coins < price) {
-        return res.json({ success: false, error: 'Недостаточно монет' });
-    }
-
-    await supabase
-        .from('users')
-        .update({ coins: userData[0].coins - price })
-        .eq('name', buyer);
-
-    await supabase.from('purchases').insert({
-        name: itemName,
-        price: price,
-        buyer: buyer,
-        date: date,
-        created_at: new Date().toISOString()
-    });
-
-    await supabase.from('history').insert({
-        date: new Date().toISOString().split('T')[0],
-        text: `🎁 ${buyer} купил(а): ${itemName} (на ${date})`
-    });
-
+app.post('/api/task/confirm', (req, res) => {
+    const task = state.tasks.find(item => item.id === req.body.taskId);
+    if (!task || !task.done || task.confirmed || task.author === req.body.user || !validUser(req.body.user)) return res.status(400).json({ success: false, error: 'Нельзя подтвердить это задание' });
+    task.confirmed = true;
+    Object.values(state.users).forEach(user => { user.coins += 10; });
+    addHistory(`✅ ${req.body.user} подтвердил(а): ${task.text}`, 'reward');
     res.json({ success: true });
 });
-
-// Обновить цель
-app.post('/api/goals/update', async (req, res) => {
-    const { index, current } = req.body;
-    const { data: goals } = await supabase.from('goals').select('id');
-    if (goals && goals[index]) {
-        await supabase.from('goals').update({ current }).eq('id', goals[index].id);
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
-    }
-});
-
-// Сохранить даты
-app.post('/api/dates/save', async (req, res) => {
-    const { meeting, anniversary, birthdayYakub, birthdaySonya } = req.body;
-    await supabase.from('history').delete().eq('type', 'date');
-    const entries = [];
-    if (meeting) entries.push({ date: meeting, text: '❤️ День знакомства', type: 'date' });
-    if (anniversary) entries.push({ date: anniversary, text: '🎂 Годовщина', type: 'date' });
-    if (birthdayYakub) entries.push({ date: birthdayYakub, text: '🎂 День рождения Якуба', type: 'date' });
-    if (birthdaySonya) entries.push({ date: birthdaySonya, text: '🎂 День рождения Сони', type: 'date' });
-    if (entries.length > 0) await supabase.from('history').insert(entries);
+app.post('/api/shop/buy', (req, res) => {
+    const item = shop.find(product => product.id === req.body.itemId);
+    const buyer = state.users[req.body.buyer];
+    if (!item || !buyer || buyer.coins < item.price || !/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)) return res.status(400).json({ success: false, error: 'Проверьте товар, дату и баланс' });
+    buyer.coins -= item.price;
+    state.purchases.unshift({ ...item, buyer: buyer.name, date: req.body.date, createdAt: new Date().toISOString() });
+    addHistory(`🎁 ${buyer.name} выбрал(а) «${item.name}» на ${req.body.date}`, 'purchase');
     res.json({ success: true });
 });
-
-// Сброс заданий
-app.post('/api/tasks/reset', async (req, res) => {
-    const today = new Date().toISOString().split('T')[0];
-    await supabase.from('tasks').delete().neq('date', today);
-
-    const { data: existing } = await supabase.from('tasks').select('*').eq('date', today);
-    if (!existing || existing.length === 0) {
-        const extras = ['❤️ Обнять', '🍳 Приготовить завтрак', '🎬 Посмотреть фильм', '🚶 Прогуляться', '💆 Сделать массаж', '☕ Сделать кофе'];
-        await supabase.from('tasks').insert([
-            { id: Date.now() + '_morning', text: '☀️ Пожелать доброе утро', date: today, done: false, confirmed: false, author: null, pending: false },
-            { id: Date.now() + '_night', text: '🌙 Пожелать спокойной ночи', date: today, done: false, confirmed: false, author: null, pending: false },
-            { id: Date.now() + '_extra', text: extras[Math.floor(Math.random() * extras.length)], date: today, done: false, confirmed: false, author: null, pending: false }
-        ]);
-    }
-    res.json({ success: true });
+app.post('/api/goals/update', (req, res) => {
+    const goal = state.goals.find(item => item.id === req.body.id);
+    const current = Number(req.body.current);
+    if (!goal || !Number.isFinite(current) || current < 0) return res.status(400).json({ success: false });
+    goal.current = Math.min(current, goal.target); addHistory(`🎯 Обновлена цель «${goal.title}»`, 'activity'); res.json({ success: true });
 });
-
-// ============ ЗАПУСК ============
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`❤️ Сервер запущен на порту ${PORT}`);
-    console.log(`📁 Supabase: ${supabaseUrl}`);
+app.post('/api/dates/save', (req, res) => {
+    state.dates.forEach(item => { if (Object.hasOwn(req.body, item.id)) item.date = String(req.body[item.id] || ''); });
+    addHistory('📅 Обновлены важные даты', 'activity'); res.json({ success: true });
 });
+app.post('/api/photos', (req, res) => {
+    const { author, description, image } = req.body;
+    if (!validUser(author) || !image || !String(image).startsWith('data:image/')) return res.status(400).json({ success: false, error: 'Добавьте фотографию' });
+    state.photos.unshift({ id: Date.now(), author, description: String(description || ''), image, date: new Date().toISOString() });
+    addHistory(`📸 ${author} добавил(а) новый момент`, 'photo'); res.json({ success: true });
+});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.listen(PORT, '0.0.0.0', () => console.log(`Love App запущен на порту ${PORT}`));

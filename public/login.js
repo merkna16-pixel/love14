@@ -1,39 +1,21 @@
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-});
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
 
-async function handleLogin(e) {
-    e.preventDefault();
-    const login = document.getElementById('loginInput').value.trim();
-    const password = document.getElementById('passwordInput').value.trim();
-    const errorEl = document.getElementById('loginError');
-    
+if (localStorage.getItem('loveUser')) window.location.href = '/dashboard.html';
+
+loginForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    loginError.textContent = '';
+    const button = loginForm.querySelector('button');
+    button.disabled = true;
     try {
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ login, password })
-        });
-        
-        // ✅ Проверяем статус ответа
-        if (!res.ok) {
-            errorEl.textContent = '❌ Ошибка сервера (статус: ' + res.status + ')';
-            errorEl.style.display = 'block';
-            return;
-        }
-        
-        const result = await res.json();
-        
-        if (result.success) {
-            localStorage.setItem('loveUser', result.user);
-            window.location.href = '/dashboard.html';
-        } else {
-            errorEl.textContent = '❌ Неверный логин или пароль';
-            errorEl.style.display = 'block';
-        }
+        const response = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('passwordInput').value }) });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Проверьте данные');
+        localStorage.setItem('loveUser', result.user);
+        window.location.href = '/dashboard.html';
     } catch (error) {
-        errorEl.textContent = '❌ Ошибка подключения к серверу';
-        errorEl.style.display = 'block';
-        console.error('Login error:', error);
+        loginError.textContent = error.message;
+        button.disabled = false;
     }
-}
+});
