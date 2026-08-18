@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love ❤️ Якуб + Соня</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <h1>❤️ Якуб + Соня</h1>
+            <div class="header-right">
+                <div class="coins">
+                    🪙 <span id="coinsYakub">500</span> Якуб
+                    🪙 <span id="coinsSonya">500</span> Соня
+                </div>
+                <div>
+                    <span id="currentUser"></span>
+                    <button id="logoutBtn">🚪</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="home">🏠 Главная</button>
+            <button class="tab" data-tab="tasks">✅ Задания</button>
+            <button class="tab" data-tab="shop">🛍️ Магазин</button>
+            <button class="tab" data-tab="history">📜 История</button>
+        </nav>
+
+        <section id="tab-home" class="tab-content active">
+            <div id="mainStats">
+                <p>👫 Вместе: <span id="daysTogether">0</span> дней</p>
+                <p>🔥 Серия: <span id="streakDays">0</span> дней</p>
+            </div>
+        </section>
+
+        <section id="tab-tasks" class="tab-content">
+            <div id="tasksContainer">Загрузка...</div>
+        </section>
+
+        <section id="tab-shop" class="tab-content">
+            <div id="shopContainer">Загрузка...</div>
+        </section>
+
+        <section id="tab-history" class="tab-content">
+            <div id="historyContainer">Загрузка...</div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
