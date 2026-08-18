@@ -12,19 +12,73 @@ app.use(express.static('public'));
 // ============ SUPABASE ============
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
+const hasRealSupabaseConfig = !!supabaseUrl && !!supabaseKey && !supabaseUrl.includes('ваш_') && !supabaseKey.includes('ваш_') && !supabaseUrl.includes('example');
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ Ошибка: SUPABASE_URL и SUPABASE_KEY не установлены');
-    process.exit(1);
+if (!hasRealSupabaseConfig) {
+    console.warn('⚠️ Supabase не настроен: будет использован локальный fallback-режим для входа');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = hasRealSupabaseConfig ? createClient(supabaseUrl, supabaseKey) : null;
+
+function normalizeLogin(value = '') {
+    return String(value)
+        .normalize('NFC')
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+}
+
+function findMatchingUser(users, login, password) {
+    const normalizedLogin = normalizeLogin(login);
+    const normalizedPassword = String(password ?? '').trim();
+    const loginVariants = new Set([normalizedLogin]);
+
+    if (normalizedLogin === 'соня' || normalizedLogin === 'sonya' || normalizedLogin === 'sonia') {
+        loginVariants.add('соня');
+        loginVariants.add('sonya');
+        loginVariants.add('sonia');
+    }
+
+    if (normalizedLogin === 'якуб' || normalizedLogin === 'yakub') {
+        loginVariants.add('якуб');
+        loginVariants.add('yakub');
+    }
+
+    return (users || []).find((user) => {
+        const storedName = normalizeLogin(user.name);
+        const storedPassword = String(user.password ?? '').trim();
+        return loginVariants.has(storedName) && storedPassword === normalizedPassword;
+    });
+}
+
+const fallbackUsers = [
+    { name: 'Якуб', password: 'yakub123', coins: 500 },
+    { name: 'Соня', password: 'sonya123', coins: 500 }
+];
+
+function getFallbackData() {
+    return {
+        users: Object.fromEntries(fallbackUsers.map(u => [u.name, { password: u.password, coins: u.coins }])),
+        tasks: [],
+        purchases: [],
+        history: [],
+        goals: [],
+        achievements: [],
+        shop: [],
+        startDate: '2024-01-01',
+        streak: 0
+    };
+}
 
 // ============ API ============
 
 // Получить все данные
 app.get('/api/data', async (req, res) => {
     try {
+        if (!hasRealSupabaseConfig || !supabase) {
+            return res.json(getFallbackData());
+        }
+
         const [users, tasks, purchases, history, goals, achievements, shop] = await Promise.all([
             supabase.from('users').select('*'),
             supabase.from('tasks').select('*'),
@@ -60,24 +114,35 @@ app.get('/api/data', async (req, res) => {
 app.post('/api/login', async (req, res) => {
     try {
         const { login, password } = req.body;
-        console.log(`🔐 Попытка входа: ${login}`);
-        
-        const { data: users, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('name', login)
-            .eq('password', password);
+        const trimmedLogin = String(login ?? '').trim();
+        console.log(`🔐 Попытка входа: ${trimmedLogin}`);
+
+        if (!hasRealSupabaseConfig || !supabase) {
+            const matchedUser = findMatchingUser(fallbackUsers, trimmedLogin, password);
+            if (matchedUser) {
+                const userName = String(matchedUser.name || trimmedLogin).trim();
+                console.log(`✅ Вход успешен: ${userName}`);
+                return res.json({ success: true, user: userName });
+            }
+            console.log(`❌ Пользователь не найден: ${trimmedLogin}`);
+            return res.json({ success: false });
+        }
+
+        const { data: users, error } = await supabase.from('users').select('*');
 
         if (error) {
             console.error('❌ Ошибка Supabase:', error);
             return res.status(500).json({ success: false, error: 'Ошибка БД' });
         }
 
-        if (users && users.length > 0) {
-            console.log(`✅ Вход успешен: ${login}`);
-            res.json({ success: true, user: login });
+        const matchedUser = findMatchingUser(users, trimmedLogin, password);
+
+        if (matchedUser) {
+            const userName = String(matchedUser.name || trimmedLogin).trim();
+            console.log(`✅ Вход успешен: ${userName}`);
+            res.json({ success: true, user: userName });
         } else {
-            console.log(`❌ Пользователь не найден: ${login}`);
+            console.log(`❌ Пользователь не найден: ${trimmedLogin}`);
             res.json({ success: false });
         }
     } catch (error) {
